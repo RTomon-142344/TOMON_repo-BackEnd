@@ -12,7 +12,8 @@ class DatabaseSeeder extends Seeder
             StudentSeeder::class,
             CourseSeeder::class,
             CategorySeeder::class,
-            PostSeeder::class
+            PostSeeder::class,
+            UserSeeder::class
         ]);
     }
 }
