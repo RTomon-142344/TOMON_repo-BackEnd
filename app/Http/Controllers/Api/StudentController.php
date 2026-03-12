@@ -13,21 +13,42 @@ class StudentController extends Controller
     {
         $query = Student::with('courses');
 
-        if ($request->search) {
-            $q = $request->search;
-            $query->where(function ($qb) use ($q) {
-                $qb->where('first_name', 'like', "%$q%")
-                   ->orWhere('last_name', 'like', "%$q%")
-                   ->orWhere('student_number', 'like', "%$q%")
-                   ->orWhere('email', 'like', "%$q%");
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name',      'like', "%{$search}%")
+                  ->orWhere('last_name',     'like', "%{$search}%")
+                  ->orWhere('email',         'like', "%{$search}%")
+                  ->orWhere('student_number','like', "%{$search}%");
             });
         }
 
-        if ($request->department) {
+        if ($request->filled('department')) {
             $query->where('department', $request->department);
         }
 
-        $students = $query->orderBy('last_name')->paginate(20);
+        $students = $query->orderBy('last_name')->paginate($request->get('per_page', 20));
+
+        $students->getCollection()->transform(function ($student) {
+            return [
+                'id'             => $student->id,
+                'student_number' => $student->student_number,
+                'first_name'     => $student->first_name,
+                'last_name'      => $student->last_name,
+                'full_name'      => $student->first_name . ' ' . $student->last_name,
+                'email'          => $student->email,
+                'gender'         => $student->gender,
+                'department'     => $student->department,
+                'enrolled_at'    => $student->enrolled_at,
+                // Use correct column names from courses migration: course_code, course_name
+                'courses' => $student->courses->map(fn($c) => [
+                    'id'   => $c->id,
+                    'code' => $c->course_code,
+                    'name' => $c->course_name,
+                ]),
+            ];
+        });
+
         return response()->json($students);
     }
 
@@ -35,6 +56,22 @@ class StudentController extends Controller
     public function show($id)
     {
         $student = Student::with('courses')->findOrFail($id);
-        return response()->json($student);
+
+        return response()->json([
+            'id'             => $student->id,
+            'student_number' => $student->student_number,
+            'first_name'     => $student->first_name,
+            'last_name'      => $student->last_name,
+            'full_name'      => $student->first_name . ' ' . $student->last_name,
+            'email'          => $student->email,
+            'gender'         => $student->gender,
+            'department'     => $student->department,
+            'enrolled_at'    => $student->enrolled_at,
+            'courses'        => $student->courses->map(fn($c) => [
+                'id'   => $c->id,
+                'code' => $c->course_code,
+                'name' => $c->course_name,
+            ]),
+        ]);
     }
 }
